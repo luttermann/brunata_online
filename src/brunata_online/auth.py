@@ -1,12 +1,41 @@
 import json
 import pathlib
 import base64
-from typing import Optional
+from typing import Optional, Any
 import requests
 import time
 
+from ._types import JsonDict
+
 
 class TokenData:
+    access_token: str
+    expires_in: int
+    refresh_token: str
+    refresh_expires_in: int
+    token_type: str
+    id_token: str
+    scope: str
+    not_before_policy: int
+    session_state: str
+    expires_at: Optional[int]
+
+    def __init__(self, **kwargs):
+        for arg_key, arg_value in kwargs.items():
+            if arg_key == "not-before-policy":
+                self.not_before_policy = arg_value
+            else:
+                setattr(self, arg_key, arg_value)
+
+    def asdict(self) -> JsonDict:
+        data = dataclasses.asdict(self)
+        data['not-before-policy'] = self.not_before_policy
+        del data['not_before_policy']
+        return data
+
+
+
+class LegacyTokenData:
     """
     Class for holding Token data.
     """
@@ -14,13 +43,13 @@ class TokenData:
         self._data: dict[str, str | int] = {}
 
     @staticmethod
-    def from_dict(data: dict[str, int | str]) -> 'TokenData':
+    def from_dict(data: dict[str, int | str]) -> 'LegacyTokenData':
         """
         Create object from dict.
         :param data: dict containing the Token data as retuned from the authentication token endpoint.
         :return:
         """
-        d = TokenData()
+        d = LegacyTokenData()
         if 'expires_at' not in data:
             data['expires_at'] = int(data.get('expires_in', 0)) + int(time.time())
         d._data = data
@@ -77,21 +106,21 @@ class TokenData:
         return str(self._data.get('access_token'))
 
 
-def as_token_data(data: dict) -> TokenData:
+def as_token_data(data: dict) -> LegacyTokenData:
     """
-    Helper function to cast json data directly into a TokenData object.
+    Helper function to cast json data directly into a LegacyTokenData object.
     :param data: decoded JSON data.
-    :return: TokenData object.
+    :return: LegacyTokenData object.
     """
-    return TokenData.from_dict(data)
+    return LegacyTokenData.from_dict(data)
 
 
 class JsonTokenData(json.JSONEncoder):
     """
-    Helper class to cast TokenData object into json.
+    Helper class to cast LegacyTokenData object into json.
     """
     def default(self, obj: object) -> dict:
-        if isinstance(obj, TokenData):
+        if isinstance(obj, LegacyTokenData):
             return obj.to_dict()
         return super().default(obj)
 
@@ -103,7 +132,7 @@ class TokenManager:
 
         :param storage_file: Path to storage token file
         """
-        self._token_data: TokenData
+        self._token_data: LegacyTokenData
         self.storage_file = storage_file
         self._load()
 
@@ -145,7 +174,7 @@ class TokenManager:
         )
 
         resp.raise_for_status()
-        self._token_data = TokenData.from_dict(resp.json())
+        self._token_data = LegacyTokenData.from_dict(resp.json())
 
     def get_auth_header(self) -> dict[str, str]:
         """Create a dict containing Authorization headers for API usage"""
