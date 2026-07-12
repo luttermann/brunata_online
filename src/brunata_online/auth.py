@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Optional
+from typing import Optional, Any
 import time
 from ._types import JsonDict
 
@@ -17,7 +17,7 @@ class TokenData:
     session_state: str
     expires_at: Optional[int] = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         for arg_key, arg_value in kwargs.items():
             if arg_key == "not-before-policy":
                 self.not_before_policy = arg_value

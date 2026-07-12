@@ -3,6 +3,7 @@ from typing import Optional
 import datetime
 import enum
 from ._base import BaseDataInterface
+from typing import Any
 
 
 class Units(enum.IntEnum):
@@ -29,7 +30,7 @@ class ConsumptionMeterInformation:
     numerator: Optional[object] = None
     denominator: Optional[object] = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         for key, value in kwargs.items():
             if key == "mountingDate":
                 setattr(self, key, datetime.datetime.fromisoformat(value))
@@ -61,7 +62,7 @@ class MeterOverview:
     decimals: int
     consumptionPriorYearSamePeriod: Optional[float] = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         for key, value in kwargs.items():
             if key == 'unit':
                 setattr(self, 'unit', Units(int(value)))
@@ -96,7 +97,7 @@ class ConsumptionData:
     interval: Interval
     consumptionLines: list[ConsumptionDataLines]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         start_date = kwargs.pop('startDate')
         self.startDate = datetime.datetime.fromisoformat(start_date)
         end_date = kwargs.pop('endDate')
@@ -126,7 +127,7 @@ class MeterValue:
     value: float
     unit: Units
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         self.readingDate = datetime.datetime.fromisoformat(kwargs['readingDate'])
         self.value = kwargs['value']
         self.unit = Units(kwargs['unit'])
@@ -139,14 +140,14 @@ class MeterValues:
     yAxisStart: int
     yAxisEnd: int
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         self.limited = kwargs['limited']
         self.yAxisStart = kwargs['yAxisStart']
         self.yAxisEnd = kwargs['yAxisEnd']
         self.meterValues = MeterValues._meter_value_list(kwargs['meterValues'])
 
     @staticmethod
-    def _meter_value_list(meter_values: list[dict[str, object]]):
+    def _meter_value_list(meter_values: list[dict[str, object]]) -> list[MeterValue]:
         values_list = []
         for value in meter_values:
             values_list.append(MeterValue(**value))
