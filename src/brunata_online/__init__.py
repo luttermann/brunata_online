@@ -1,4 +1,5 @@
-from ._base import TokenData, BrunataOnlineClient
+from ._base import BrunataOnlineClient
+from .auth import TokenData
 from .usage import MeterApi, MeterOverview, MeterValues, ConsumptionData, Interval, Units
 from .user import BrunataUser
 
