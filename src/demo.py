@@ -1,18 +1,46 @@
-import pathlib
-from brunata_online import BrunataUser, TokenManager
-from brunata_online.usage import MeterInformation
+import datetime
 from pprint import pp
+import json
+import pytz
 
-tm = TokenManager(pathlib.Path(__file__).parent / '.token.json')
+from brunata_online import BrunataOnlineClient, TokenData, BrunataUser
+from brunata_online.usage import Meters, Interval
 
-user = BrunataUser(tm)
-meter = MeterInformation(tm)
+# import logging
+# import http.client
+#
+# http.client.HTTPConnection.debuglevel = 1
+# logging.basicConfig()
+# logging.getLogger().setLevel(logging.DEBUG)
+# requests_log = logging.getLogger("requests.packages.urllib3")
+# requests_log.setLevel(logging.DEBUG)
+# requests_log.propagate = True
 
-print("###################### user.get_user() ######################")
-pp(user.get_user())
-print("###################### user.get_consumer() ######################")
-pp(user.get_consumer())
-print("###################### meter.meteroverview() ######################")
-pp(meter.meteroverview())
-print("###################### meter.meterforconsumer() ######################")
-pp(meter.metersforconsumer())
+tz = pytz.timezone('Europe/Copenhagen')
+
+with open('.token.json', 'r') as f:
+    td = TokenData(**json.load(f))
+
+client = BrunataOnlineClient(td)
+
+us = BrunataUser(client)
+us.get_user()
+mt = Meters(client)
+my_meters = mt.meteroverview()
+assert len(my_meters) > 0
+
+meter_values = mt.metervalues(
+    meter=my_meters[0].meterId,
+    start_date=datetime.datetime.now(tz=tz) - datetime.timedelta(days=2),
+    end_date=datetime.datetime.now(tz=tz),
+)
+
+pp(meter_values)
+
+cons = mt.consumption(
+    startdate=datetime.datetime.now(tz=tz) - datetime.timedelta(days=2),
+    enddate=datetime.datetime.now(tz=tz),
+    interval=Interval.HOUR,
+)
+
+pp(cons)

@@ -1,24 +1,18 @@
 import base64
 import json
-from datetime import datetime
+import time
 from typing import Optional
 
 import requests
 
 from ._types import JsonDict
-from .auth import TokenManager, TokenData
+from .auth import TokenData
 
 
 class BrunataOnlineClient:
     def __init__(self, token: TokenData) -> None:
         self.token = token
         self.s = requests.Session()
-
-    def _headers(self) -> dict[str, str]:
-        return {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        }
 
     def get(self, url: str, params: Optional[dict[str, str]] = None) -> JsonDict:
         self._update_token_headers()
@@ -27,10 +21,12 @@ class BrunataOnlineClient:
         return resp.json()
 
     def _update_token_headers(self) -> None:
-        if self.token.expires_at is not None and self.token.expires_at + 60 < datetime.now():
+        if self.token.expires_at is not None and self.token.expires_at + 60 > time.time():
             self.s.headers.update({
                 "Authorization": f"{self.token.token_type} {self.token.access_token}",
             })
+            from pprint import pp
+            pp(self.s.headers)
             return
         self._update_token()
 
@@ -46,43 +42,27 @@ class BrunataOnlineClient:
 
         payload = {
             'client_id': refresh_properties['azp'],
-            'refresh_token': self._token_data.refresh_token,
+            'refresh_token': self.token.refresh_token,
             'grant_type': 'refresh_token',
         }
 
         self.s.headers.clear()
-        self.s.headers.update(self._headers())
-        resp = self.s.post("token_refresh_endpoint", data=payload)
-        self.token = TokenManager(resp.json())
+        self.s.headers.update({
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        })
+        resp = self.s.post('https://online.brunata.com/online-auth-webservice/v1/rest/oauth/token', data=payload)
+
+        self.token = TokenData(**resp.json())
+
+        self.s.headers.clear()
+        self.s.headers.update({
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            "Authorization": f"{self.token.token_type} {self.token.access_token}",
+        })
 
 
 class BaseDataInterface:
-
-    """
-    Base class for fetching data from Brunata API.
-    """
-    def __init__(self, token: TokenManager):
-        """
-        :param token: TokenManager instance.
-        """
-        self.token = token
-        self.s = requests.Session()
-        self.s.headers.update(
-            {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json, text/plain, */*',
-            }
-        )
-
-    def _get(self, url: str, params: Optional[dict[str, str]] = None) -> dict | list:
-        """
-        Method to get JSON data from Brunata API.
-        :param url: URL to fetch data from.
-        :param params: dict of URL parameters.
-        :return: JSON data in dict|list format.
-        """
-        token_headers = self.token.get_auth_header()
-        self.s.headers.update(token_headers)
-        resp = self.s.get(url, params=params)
-        resp.raise_for_status()
-        return resp.json()
+    def __init__(self, client: BrunataOnlineClient) -> None:
+        self.client = client
