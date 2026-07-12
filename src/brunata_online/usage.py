@@ -1,13 +1,10 @@
 import dataclasses
 from typing import Optional
 import datetime
-import enum
-from ._base import BaseDataInterface
+
+from .types import Interval, Units
+from .base import BaseDataInterface
 from typing import Any
-
-
-class Units(enum.IntEnum):
-    SQUARE_METERS = 8
 
 
 @dataclasses.dataclass
@@ -20,7 +17,7 @@ class ConsumptionMeterInformation:
     transmitting: bool
     allocationUnit: str              # 'K'
     superAllocationUnit: int
-    unit: Units                      # Cast from string "8"
+    unit: Units  # Cast from string "8"
     meterSequenceNo: int
     decimals: int
     dismountedDate: Optional[datetime.datetime] = None
@@ -68,13 +65,6 @@ class MeterOverview:
                 setattr(self, 'unit', Units(int(value)))
                 continue
             setattr(self, key, value)
-
-
-class Interval(enum.StrEnum):
-    HOUR = 'H'
-    DAY = 'D'
-    MONTH = 'M'
-    YEAR = 'Y'
 
 
 @dataclasses.dataclass

@@ -1,7 +1,8 @@
-from ._base import BrunataOnlineClient
-from .auth import TokenData
-from .usage import MeterApi, MeterOverview, MeterValues, ConsumptionData, Interval, Units
+from .auth import TokenData, BrunataOnlineClient
+from .usage import MeterApi, MeterOverview, MeterValues, ConsumptionData
+from .types import Interval, Units
 from .user import BrunataUser
+
 
 __all__ = [
     "BrunataOnlineClient",

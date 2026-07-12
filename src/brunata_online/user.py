@@ -1,8 +1,8 @@
 """
 Brunata user access
 """
-from ._base import BaseDataInterface
-from ._types import JsonDict
+from .base import BaseDataInterface
+from .types import JsonDict
 
 
 class BrunataUser(BaseDataInterface):
