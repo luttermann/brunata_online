@@ -1,173 +1,92 @@
-import json
-import pathlib
 import base64
-from typing import Optional
-import requests
+import dataclasses
+import json
+from typing import Optional, Any
 import time
 
+import requests
 
+from .types import JsonDict
+
+
+@dataclasses.dataclass
 class TokenData:
-    """
-    Class for holding Token data.
-    """
-    def __init__(self) -> None:
-        self._data: dict[str, str | int] = {}
+    access_token: str
+    expires_in: int
+    refresh_token: str
+    refresh_expires_in: int
+    token_type: str
+    id_token: str
+    scope: str
+    not_before_policy: int
+    session_state: str
+    expires_at: Optional[int] = None
 
-    @staticmethod
-    def from_dict(data: dict[str, int | str]) -> 'TokenData':
-        """
-        Create object from dict.
-        :param data: dict containing the Token data as retuned from the authentication token endpoint.
-        :return:
-        """
-        d = TokenData()
-        if 'expires_at' not in data:
-            data['expires_at'] = int(data.get('expires_in', 0)) + int(time.time())
-        d._data = data
-        return d
+    def __init__(self, **kwargs: Any):
+        for arg_key, arg_value in kwargs.items():
+            if arg_key == "not-before-policy":
+                self.not_before_policy = arg_value
+                continue
+            setattr(self, arg_key, arg_value)
+        if self.expires_at is None:
+            self.expires_at = int(time.time()) + self.expires_in
 
-    def to_dict(self) -> dict:
-        """
-        Convert object to dict.
-        :return: dict containing Token data.
-        """
-        return self._data
-
-    @property
-    def expires_at(self) -> Optional[int]:
-        """
-        Expiration time in Unix epoch format.
-        :return: Returns None if time is not known or not yet calculated, else Unix epoch int.
-        """
-        try:
-            value = self._data.get('expires_at', None)
-            assert isinstance(value, int)
-        except AssertionError:
-            return None
-        return value
-
-    @expires_at.setter
-    def expires_at(self, value: int) -> None:
-        """
-        Set the expiration time in Unix epoch format.
-        :param value: int Unix epoch.
-        :return: None
-        """
-        self._data['expires_at'] = value
-
-    @property
-    def refresh_token(self) -> str:
-        """
-        Refresh token
-        :return: str The token to refresh the access token.
-        """
-        data = self._data.get('refresh_token', None)
-        try:
-            assert isinstance(data, str)
-        except AssertionError as E:
-            raise E
+    def asdict(self) -> JsonDict:
+        data = dataclasses.asdict(self)
+        data['not-before-policy'] = self.not_before_policy
+        del data['not_before_policy']
         return data
 
-    @property
-    def access_token(self) -> str:
-        """
-        Access token
-        :return: str The token to use when using the API in general.
-        """
-        return str(self._data.get('access_token'))
 
+class BrunataOnlineClient:
+    def __init__(self, token: TokenData) -> None:
+        self.token = token
+        self.s = requests.Session()
 
-def as_token_data(data: dict) -> TokenData:
-    """
-    Helper function to cast json data directly into a TokenData object.
-    :param data: decoded JSON data.
-    :return: TokenData object.
-    """
-    return TokenData.from_dict(data)
+    def get(self, url: str, params: Optional[dict[str, str]] = None) -> JsonDict:
+        self._update_token_headers()
+        resp = self.s.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
 
+    def _update_token_headers(self) -> None:
+        if self.token.expires_at is not None and self.token.expires_at + 60 > time.time():
+            self.s.headers.update({
+                "Authorization": f"{self.token.token_type} {self.token.access_token}",
+            })
+            from pprint import pp
+            pp(self.s.headers)
+            return
+        self._update_token()
 
-class JsonTokenData(json.JSONEncoder):
-    """
-    Helper class to cast TokenData object into json.
-    """
-    def default(self, obj: object) -> dict:
-        if isinstance(obj, TokenData):
-            return obj.to_dict()
-        return super().default(obj)
+    def _update_token(self) -> None:
+        """Internal method to create use the refresh_token to get a renewed access."""
 
-
-class TokenManager:
-    def __init__(self, storage_file: pathlib.Path):
-        """
-        TokenManager class to update load and store the token data.
-
-        :param storage_file: Path to storage token file
-        """
-        self._token_data: TokenData
-        self.storage_file = storage_file
-        self._load()
-
-    def _load(self) -> None:
-        """Internal load method, to load token data from storage file."""
-        with self.storage_file.open('rt') as fp:
-            self._token_data = json.load(fp, object_hook=as_token_data)
-            if self._token_data.expires_at is None:
-                self.refresh_token()
-
-    def _save(self) -> None:
-        """Internal save method, to save token data to storage file."""
-        if self._token_data.access_token is not None or self._token_data.refresh_token is not None:
-            with self.storage_file.open('w') as fp:
-                json.dump(self._token_data, fp, cls=JsonTokenData, indent=4)
-
-    def _create_refresh_payload(self) -> dict[str, str]:
-        """Internal method to create payload for refreshing tokens."""
-        token_parts = self._token_data.refresh_token.split('.')
+        # Start by format the Payload from the refresh_token
+        token_parts = self.token.refresh_token.split('.')
         refresh_properties = token_parts[1]
         refresh_properties = refresh_properties + ('=' * (len(refresh_properties) % 4))
         refresh_properties = base64.b64decode(refresh_properties).decode('utf-8')
         refresh_properties = json.loads(refresh_properties)
 
-        return {
+        payload = {
             'client_id': refresh_properties['azp'],
-            'refresh_token': self._token_data.refresh_token,
+            'refresh_token': self.token.refresh_token,
             'grant_type': 'refresh_token',
         }
 
-    def refresh_token(self) -> None:
-        """Refresh the access token.
-        Raises requests.exceptions.HTTPError on Error
-        :return: None
-        """
-        resp = requests.post(
-            'https://online.brunata.com/online-auth-webservice/v1/rest/oauth/token',
-            data=self._create_refresh_payload(),
-        )
+        self.s.headers.clear()
+        self.s.headers.update({
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        })
+        resp = self.s.post('https://online.brunata.com/online-auth-webservice/v1/rest/oauth/token', data=payload)
 
-        resp.raise_for_status()
-        self._token_data = TokenData.from_dict(resp.json())
+        self.token = TokenData(**resp.json())
 
-    def get_auth_header(self) -> dict[str, str]:
-        """Create a dict containing Authorization headers for API usage"""
-        self.refresh_token()
-        if self._token_data.expires_at is None:
-            raise Exception('TokenManager has not been initialized')
-        if time.time() + 60 > self._token_data.expires_at:
-            self.refresh_token()
-
-        return {
-            'Authorization': 'Bearer ' + str(self._token_data.access_token)
-        }
-
-    def dump_token(self) -> dict[str, str]:
-        """Dump the token data, primarily usable for debugging."""
-        return self._token_data.to_dict()
-
-    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
-        self._save()
-
-    def __enter__(self) -> "TokenManager":
-        return self
-
-    def __del__(self) -> None:
-        self._save()
+        self.s.headers.clear()
+        self.s.headers.update({
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            "Authorization": f"{self.token.token_type} {self.token.access_token}",
+        })
