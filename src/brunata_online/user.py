@@ -2,14 +2,14 @@
 Brunata user access
 """
 from ._base import BaseDataInterface
-from typing import Any
+from ._types import JsonDict
 
 
 class BrunataUser(BaseDataInterface):
-    def get_user(self) -> dict[str, Any]:
+    def get_user(self) -> JsonDict:
         data = self.client.get('https://online.brunata.com/online-webservice/v2/rest/user')
         return data
 
-    def get_consumer(self) -> dict[str, Any]:
+    def get_consumer(self) -> JsonDict:
         data = self.client.get('https://online.brunata.com/online-webservice/v2/rest/consumer')
         return data

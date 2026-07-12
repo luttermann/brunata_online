@@ -153,7 +153,7 @@ class MeterValues:
         return values_list
 
 
-class Meters(BaseDataInterface):
+class MeterApi(BaseDataInterface):
     def meteroverview(self) -> list[MeterOverview]:
         data = self.client.get('https://online.brunata.com/online-webservice/v2/rest/consumer/meteroverview')
         meters: list[MeterOverview] = []

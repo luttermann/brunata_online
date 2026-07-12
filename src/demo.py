@@ -3,8 +3,7 @@ from pprint import pp
 import json
 import pytz
 
-from brunata_online import BrunataOnlineClient, TokenData, BrunataUser
-from brunata_online.usage import Meters, Interval
+from brunata_online import BrunataOnlineClient, TokenData, BrunataUser, MeterApi, Interval
 
 # import logging
 # import http.client
@@ -25,7 +24,7 @@ client = BrunataOnlineClient(td)
 
 us = BrunataUser(client)
 us.get_user()
-mt = Meters(client)
+mt = MeterApi(client)
 my_meters = mt.meteroverview()
 assert len(my_meters) > 0
 
