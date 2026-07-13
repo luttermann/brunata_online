@@ -219,3 +219,4 @@ __marimo__/
 # Token file
 .token.json
 .token.json*
+token

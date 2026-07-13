@@ -5,41 +5,45 @@ import pytz
 
 from brunata_online import BrunataOnlineClient, TokenData, BrunataUser, MeterApi, Interval
 
-# import logging
-# import http.client
-#
-# http.client.HTTPConnection.debuglevel = 1
-# logging.basicConfig()
-# logging.getLogger().setLevel(logging.DEBUG)
-# requests_log = logging.getLogger("requests.packages.urllib3")
-# requests_log.setLevel(logging.DEBUG)
-# requests_log.propagate = True
+# Create a TokenData object to use at authentication against the API (read it from a file)
+token_fh = open('token', 'r+')
+td = TokenData(**json.load(token_fh))
 
-tz = pytz.timezone('Europe/Copenhagen')
+# Load the local timezone, for use with start_date/end_date when getting meter data.
+time_zone = pytz.timezone('Europe/Copenhagen')
 
-with open('.token.json', 'r') as f:
-    td = TokenData(**json.load(f))
-
+# Create a client with the token
 client = BrunataOnlineClient(td)
 
-us = BrunataUser(client)
-us.get_user()
-mt = MeterApi(client)
-my_meters = mt.meteroverview()
-assert len(my_meters) > 0
+# Create a BrunataUser object to handle getting user data
+user = BrunataUser(client)
+pp(user.get_user())
 
-meter_values = mt.metervalues(
+# Create a MeterApi to get information about the meters that you can access.
+meters = MeterApi(client)
+my_meters = meters.meteroverview()
+pp(my_meters)
+
+# Fetch information about the meter values (past 24 hours)
+meter_values = meters.metervalues(
     meter=my_meters[0].meterId,
-    start_date=datetime.datetime.now(tz=tz) - datetime.timedelta(days=2),
-    end_date=datetime.datetime.now(tz=tz),
+    start_date=datetime.datetime.now(tz=time_zone) - datetime.timedelta(days=1),
+    end_date=datetime.datetime.now(tz=time_zone),
 )
 
 pp(meter_values)
 
-cons = mt.consumption(
-    startdate=datetime.datetime.now(tz=tz) - datetime.timedelta(days=2),
-    enddate=datetime.datetime.now(tz=tz),
+# Fetch consumption for all meters for every `interval` (past 24 hours)
+consumption = meters.consumption(
+    startdate=datetime.datetime.now(tz=time_zone) - datetime.timedelta(days=1),
+    enddate=datetime.datetime.now(tz=time_zone),
     interval=Interval.HOUR,
 )
 
-pp(cons)
+pp(consumption)
+
+# Save the, possibly refreshed, token back into the initial token file.
+token_fh.seek(0)
+token_fh.truncate()
+token_fh.write(json.dumps(td.asdict(), indent=4))
+token_fh.close()

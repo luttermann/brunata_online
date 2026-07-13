@@ -20,6 +20,22 @@ brunata\_online.auth module
    :show-inheritance:
    :undoc-members:
 
+brunata\_online.base module
+---------------------------
+
+.. automodule:: brunata_online.base
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+brunata\_online.types module
+----------------------------
+
+.. automodule:: brunata_online.types
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 brunata\_online.usage module
 ----------------------------
 
