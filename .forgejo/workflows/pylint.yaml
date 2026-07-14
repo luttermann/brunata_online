@@ -13,19 +13,6 @@ jobs:
           apt update
           apt install -y python3-venv
 
-      - name: Create and activate VENV and install deps
-        run: |
-          python3 -m venv ${{ env.HOME }}/.venv
-          source ${{ env.HOME }}/.venv/bin/activate
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          pip install -U pip mypy flake8 pydoclint
-          mypy --install-types --non-interactive ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
-
       - name: Linting
         run: |
-          set -x
-          ${{ env.FORGEJO_WORKSPACE }}/tests/lint.sh ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
-          mypy --disallow-untyped-defs ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
-          flake8 --max-line-length 120 ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
-          pydoclint --style sphinx -sfn true -csm true ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
+          ${{ env.FORGEJO_WORKSPACE }}/tests/lint.sh
