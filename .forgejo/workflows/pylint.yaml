@@ -25,7 +25,7 @@ jobs:
       - name: Linting
         run: |
           set -x
-          tests\lint.sh ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
+          ${{ env.FORGEJO_WORKSPACE }}/tests/lint.sh ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
           mypy --disallow-untyped-defs ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
           flake8 --max-line-length 120 ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
           pydoclint --style sphinx -sfn true -csm true ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
