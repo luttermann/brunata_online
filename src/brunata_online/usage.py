@@ -101,8 +101,6 @@ class ConsumptionData:
     def _create_consumption_lines(values: list[dict]) -> list[ConsumptionDataLines]:
         lines = []
         for val in values:
-            from pprint import pprint
-            pprint(val['meter'])
             meter = ConsumptionMeterInformation(**val['meter'])
             data_line = ConsumptionDataLines(meter=meter, consumptionValues=[])
             for cv in val['consumptionValues']:

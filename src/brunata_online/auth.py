@@ -54,8 +54,6 @@ class BrunataOnlineClient:
             self.s.headers.update({
                 "Authorization": f"{self.token.token_type} {self.token.access_token}",
             })
-            from pprint import pp
-            pp(self.s.headers)
             return
         self._update_token()
 
