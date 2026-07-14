@@ -35,8 +35,8 @@ pp(meter_values)
 
 # Fetch consumption for all meters for every `interval` (past 24 hours)
 consumption = meters.consumption(
-    startdate=datetime.datetime.now(tz=time_zone) - datetime.timedelta(days=1),
-    enddate=datetime.datetime.now(tz=time_zone),
+    start_date=datetime.datetime.now(tz=time_zone) - datetime.timedelta(days=1),
+    end_date=datetime.datetime.now(tz=time_zone),
     interval=Interval.HOUR,
 )
 

@@ -4,6 +4,7 @@ import datetime
 
 from .types import Interval, Units
 from .base import BaseDataInterface
+from .exceptions import MissingTimezoneError
 from typing import Any
 
 
@@ -143,7 +144,13 @@ class MeterValues:
 
 
 class MeterApi(BaseDataInterface):
+    """For accessing meter information and readouts"""
     def meteroverview(self) -> list[MeterOverview]:
+        """Get an overview of all active meters.
+
+        :return: list of MeterOverview
+        :rtype: list[MeterOverview]
+        """
         data = self.client.get('https://online.brunata.com/online-webservice/v2/rest/consumer/meteroverview')
         meters: list[MeterOverview] = []
         for meter in data:
@@ -151,17 +158,32 @@ class MeterApi(BaseDataInterface):
             meters.append(MeterOverview(**meter))
         return meters
 
-    def consumption(self, startdate: datetime.datetime, enddate: datetime.datetime, interval: Interval,
+    def consumption(self, start_date: datetime.datetime, end_date: datetime.datetime, interval: Interval,
                     allocationunit: str = "K") -> ConsumptionData:
-        if startdate.tzinfo is None or enddate.tzinfo is None:
-            raise Exception('startdate and enddate must have timezone info')
+        """Get a list of consumption for all meters tallied up pr `Interval` from `start_date` to `end_date`.
+
+        :param start_date: start date
+        :type start_date: datetime.datetime
+        :param end_date: end date
+        :type end_date: datetime.datetime
+        :param interval: interval for summing up values
+        :type interval: Interval
+        :param allocationunit: Don't quite know what this is, but it needs to be 'K' in all instances that is currently
+           known
+        :type allocationunit: str
+        :raises MissingTimezoneError: When datetime.datetime objects doesnt have a valid timezone.
+        :return: Data about consumption from all accessible meters.
+        :rtype: ConsumptionData
+        """
+        if start_date.tzinfo is None or end_date.tzinfo is None:
+            raise MissingTimezoneError('startdate and enddate must have timezone info')
 
         # startdate = startdate.replace(minute=0, second=0, microsecond=0)
         # enddate = enddate.replace(minute=0, second=0, microsecond=0)
 
         params = {
-            "startdate": startdate.isoformat(),
-            "enddate": enddate.isoformat(),
+            "startdate": start_date.isoformat(),
+            "enddate": end_date.isoformat(),
             "interval": interval.value,
             "allocationunit": allocationunit,
         }
@@ -174,9 +196,21 @@ class MeterApi(BaseDataInterface):
                     start_date: datetime.datetime,
                     end_date: datetime.datetime,
                     meter: int) -> MeterValues:
+        """Get values (readings) from a specific meter
+
+        :param start_date: start date
+        :type start_date: datetime.datetime
+        :param end_date: end date
+        :type end_date: datetime.datetime
+        :param meter: meter
+        :type meter: int
+        :raises MissingTimezoneError: When datetime.datetime objects don't have a valid timezone.
+        :return: Values from the specified meter and period
+        :rtype: MeterValues
+        """
 
         if start_date.tzinfo is None or end_date.tzinfo is None:
-            raise Exception('start_date and end_date must have timezone info')
+            raise MissingTimezoneError('start_date and end_date must have timezone info')
 
         params = {
             "startdate": start_date.isoformat(timespec='milliseconds'),

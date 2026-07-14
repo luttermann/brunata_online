@@ -6,6 +6,7 @@ JsonData: TypeAlias = JsonDict | list[JsonDict]
 
 
 class Interval(enum.StrEnum):
+    """Interval representations"""
     HOUR = 'H'
     DAY = 'D'
     MONTH = 'M'
@@ -13,4 +14,5 @@ class Interval(enum.StrEnum):
 
 
 class Units(enum.IntEnum):
+    """Unit representations"""
     SQUARE_METERS = 8

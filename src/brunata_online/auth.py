@@ -39,26 +39,45 @@ class TokenData:
 
 
 class BrunataOnlineClient:
+    """
+    Client used for refreshing tokens, and requesting data from API endpoints.
+    """
     def __init__(self, token: TokenData) -> None:
         self.token = token
         self.s = requests.Session()
 
     def get(self, url: str, params: Optional[dict[str, str]] = None) -> JsonDict:
+        """Common method to get JSON data from URL endpoint. Ensuring that token is up to date.
+
+        :param url: API endpoint url
+        :type url: str
+        :param params: http query parameters
+        :type params: Optional[dict[str, str]]
+        :return: JSON data from API endpoint
+        :rtype: JsonDict
+        """
         self._update_token_headers()
         resp = self.s.get(url, params=params)
         resp.raise_for_status()
         return resp.json()
 
     def _update_token_headers(self) -> None:
+        """Internal: Set the Authorization header according to current TokenData, and update TokenData if needed"""
         if self.token.expires_at is not None and self.token.expires_at + 60 > time.time():
             self.s.headers.update({
                 "Authorization": f"{self.token.token_type} {self.token.access_token}",
             })
             return
         self._update_token()
+        if self.token.expires_at is not None and self.token.expires_at + 60 > time.time():
+            self.s.headers.update({
+                "Authorization": f"{self.token.token_type} {self.token.access_token}",
+            })
+        else:
+            raise Exception('Unable to refresh token')
 
     def _update_token(self) -> None:
-        """Internal method to create use the refresh_token to get a renewed access."""
+        """Internal method to use the refresh_token to get a renewed access."""
 
         # Start by format the Payload from the refresh_token
         token_parts = self.token.refresh_token.split('.')

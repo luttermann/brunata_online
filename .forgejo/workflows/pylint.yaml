@@ -8,11 +8,6 @@ jobs:
       image: node:current
     steps:
       - uses: actions/checkout@v6
-      - name: Debug info
-        run: |
-          pwd
-          env
-
       - name: Install python3-venv
         run: |
           apt update
@@ -24,11 +19,13 @@ jobs:
           source ${{ env.HOME }}/.venv/bin/activate
           echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          pip install -U pip mypy flake8
+          pip install -U pip mypy flake8 pydoclint
           mypy --install-types --non-interactive ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
 
       - name: Linting
         run: |
           set -x
+          tests\lint.sh ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
           mypy --disallow-untyped-defs ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
           flake8 --max-line-length 120 ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}
+          pydoclint --style sphinx -sfn true -csm true ${{ env.FORGEJO_WORKSPACE }}/${{ env.PYSRC }}

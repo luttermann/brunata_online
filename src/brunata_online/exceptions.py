@@ -1,0 +1,2 @@
+class MissingTimezoneError(Exception):
+    pass
